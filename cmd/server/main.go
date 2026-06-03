@@ -25,7 +25,7 @@ func main() {
 
 	ctx := context.Background()
 
-	pgPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pgPool, err := pgxpool.New(ctx, cfg.DatabaseURL())
 	if err != nil {
 		log.Fatalf("failed to connect postgres: %v", err)
 	}
