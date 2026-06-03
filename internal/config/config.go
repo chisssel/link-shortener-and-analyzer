@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -14,7 +15,6 @@ type Config struct {
 	PostgresUser     string
 	PostgresPassword string
 	PostgresDB       string
-	DatabaseURL      string
 
 	RedisHost     string
 	RedisPort     string
@@ -22,6 +22,11 @@ type Config struct {
 	RedisDB       int
 
 	CacheTTL int
+}
+
+func (c *Config) DatabaseURL() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.PostgresUser, c.PostgresPassword, c.PostgresHost, c.PostgresPort, c.PostgresDB)
 }
 
 func Load() *Config {
@@ -34,7 +39,6 @@ func Load() *Config {
 		PostgresUser:     getEnv("POSTGRES_USER", "urlshortener"),
 		PostgresPassword: getEnv("POSTGRES_PASSWORD", "urlshortener_secret"),
 		PostgresDB:       getEnv("POSTGRES_DB", "urlshortener"),
-		DatabaseURL:      getEnv("DATABASE_URL", ""),
 
 		RedisHost:     getEnv("REDIS_HOST", "localhost"),
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
