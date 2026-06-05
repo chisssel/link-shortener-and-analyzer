@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} — URL Shortener</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+        header { background: #4a90d9; color: white; padding: 16px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        header .container { display: flex; justify-content: space-between; align-items: center; }
+        header a { color: white; text-decoration: none; margin-left: 16px; font-weight: 500; }
+        header a:hover { text-decoration: underline; }
+        h1 { font-size: 1.5rem; }
+        h2 { margin: 24px 0 12px; font-size: 1.25rem; color: #2c3e50; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; }
+        tr:hover { background: #f8f9fa; }
+        .badge { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: #4a90d9; }
+        .stat-card .label { font-size: 0.85rem; color: #777; margin-top: 4px; }
+        .btn { display: inline-block; background: #4a90d9; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+        .btn:hover { background: #357abd; }
+        .short-url { font-family: monospace; background: #f0f4f8; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+        .error { color: #d32f2f; background: #ffebee; padding: 12px; border-radius: 6px; margin: 16px 0; }
+        .desc { color: #666; font-size: 0.9rem; margin-bottom: 16px; }
+        .hero { text-align: center; padding: 48px 0; }
+        .hero h2 { font-size: 2rem; margin-bottom: 12px; }
+        .hero p { font-size: 1.1rem; color: #666; max-width: 500px; margin: 0 auto 24px; }
+        .create-form { display: flex; gap: 8px; max-width: 600px; margin: 0 auto; }
+        .create-form input[type=url] { flex: 1; padding: 10px 14px; border: 2px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        .create-form input[type=url]:focus { border-color: #4a90d9; outline: none; }
+        .copy-btn { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/dashboard/" style="margin:0"><h1>🔗 URL Shortener</h1></a>
+            <nav>
+                <a href="/dashboard/">Home</a>
+                <a href="/dashboard/links">My Links</a>
+                <a href="/swagger/" target="_blank">API</a>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        {{if .Error}}
+            <div class="error">{{.Error}}</div>
+        {{end}}
+
+        {{if eq .Content "index"}}
+            <div class="hero">
+                <h2>Сокращайте ссылки с аналитикой</h2>
+                <p>Создавайте короткие ссылки, отслеживайте переходы, анализируйте аудиторию</p>
+                <form class="create-form" id="shortenForm">
+                    <input type="url" name="url" placeholder="https://example.com/very/long/url" required>
+                    <button type="submit" class="btn">Сократить</button>
+                </form>
+                <div id="result" style="margin-top:16px;display:none"></div>
+            </div>
+            <script>
+                document.getElementById('shortenForm').addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const url = this.querySelector('input[name=url]').value;
+                    const res = await fetch('/api/shorten', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({original_url: url, owner_id: 'demo'})
+                    });
+                    const data = await res.json();
+                    const result = document.getElementById('result');
+                    if (res.ok) {
+                        result.style.display = 'block';
+                        result.innerHTML = '<div class="card">Сокращённая ссылка: <strong><a href="' + data.short_url + '" target="_blank" class="short-url">' + data.short_url + '</a></strong></div>';
+                    } else {
+                        result.style.display = 'block';
+                        result.innerHTML = '<div class="error">' + (data.error || 'Error') + '</div>';
+                    }
+                });
+            </script>
+        {{end}}
+
+        {{if eq .Content "links"}}
+            <h2>Мои ссылки</h2>
+            <p class="desc">Owner ID: <strong>{{.OwnerID}}</strong></p>
+            {{if .Links}}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Short Code</th>
+                            <th>Original URL</th>
+                            <th>Created</th>
+                            <th>Stats</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Links}}
+                        <tr>
+                            <td>{{.ID}}</td>
+                            <td><span class="short-url">{{.ShortCode}}</span></td>
+                            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.OriginalURL}}</td>
+                            <td>{{.CreatedAt.Format "02.01.2006 15:04"}}</td>
+                            <td><a href="/dashboard/link/{{.ID}}" class="btn">Stats</a></td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            {{else}}
+                <p>No links yet. <a href="/dashboard/">Create one</a>.</p>
+            {{end}}
+        {{end}}
+
+        {{if eq .Content "stats"}}
+            <h2>Статистика для {{.Link.ShortCode}}</h2>
+            <p class="desc"><a href="{{.Link.OriginalURL}}" target="_blank" class="short-url">{{.Link.OriginalURL}}</a></p>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="value">{{.Stats.TotalClicks}}</div>
+                    <div class="label">Всего переходов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value">{{.Stats.UniqueClicks}}</div>
+                    <div class="label">Уникальных</div>
+                </div>
+            </div>
+
+            {{if .Stats.ClicksByDay}}
+            <div class="card">
+                <h2>Переходы по дням</h2>
+                <table>
+                    <thead><tr><th>Дата</th><th>Переходы</th></tr></thead>
+                    <tbody>
+                        {{range .Stats.ClicksByDay}}
+                        <tr><td>{{.Date}}</td><td>{{.Count}}</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
+
+            {{if .Stats.TopReferrers}}
+            <div class="card">
+                <h2>Топ рефереров</h2>
+                <table>
+                    <thead><tr><th>Источник</th><th>Переходы</th></tr></thead>
+                    <tbody>
+                        {{range .Stats.TopReferrers}}
+                        <tr><td>{{.Referrer}}</td><td>{{.Count}}</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
+
+            {{if .Stats.TopCountries}}
+            <div class="card">
+                <h2>Топ стран</h2>
+                <table>
+                    <thead><tr><th>Страна</th><th>Переходы</th></tr></thead>
+                    <tbody>
+                        {{range .Stats.TopCountries}}
+                        <tr><td>{{.Country}}</td><td>{{.Count}}</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
+        {{end}}
+
+        {{if eq .Content "swagger"}}
+            <div class="hero">
+                <h2>API Documentation</h2>
+                <p>Полная спецификация REST API в формате OpenAPI 3.0</p>
+                <p style="margin-top:12px">
+                    <a href="/swagger/ui" class="btn" target="_blank">Swagger UI</a>
+                    <a href="/swagger/openapi.yaml" class="btn" style="background:#555" target="_blank">openapi.yaml</a>
+                </p>
+            </div>
+        {{end}}
+    </div>
+</body>
+</html>
