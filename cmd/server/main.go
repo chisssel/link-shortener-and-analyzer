@@ -14,6 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/artem/url-shortener/internal/config"
+	"github.com/artem/url-shortener/internal/geo"
 	"github.com/artem/url-shortener/internal/handler"
 	"github.com/artem/url-shortener/internal/middleware"
 	"github.com/artem/url-shortener/internal/repository"
@@ -45,17 +46,22 @@ func main() {
 	linkRepo := repository.NewPostgresRepo(pgPool)
 	cacheRepo := repository.NewRedisRepo(rdb, cfg.CacheTTL)
 	svc := service.NewShortenerService(linkRepo, cacheRepo)
+	geoClient := geo.NewClient()
 
 	r := gin.Default()
 
 	r.Use(middleware.RateLimiter(rdb))
 	r.Use(middleware.CORS())
 
-	handler.RegisterRoutes(r, svc, linkRepo)
+	r.LoadHTMLGlob("web/templates/*.html")
+
+	handler.RegisterRoutes(r, svc, linkRepo, geoClient)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	registerSwaggerRoutes(r, cfg.ServerPort)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ServerPort,
@@ -78,3 +84,38 @@ func main() {
 	defer cancel()
 	srv.Shutdown(shutdownCtx)
 }
+
+func registerSwaggerRoutes(r *gin.Engine, port string) {
+	r.StaticFile("/swagger/openapi.yaml", "docs/openapi.yaml")
+
+	r.GET("/swagger/", func(c *gin.Context) {
+		c.HTML(200, "layout.html", gin.H{
+			"Title":   "API Documentation",
+			"Content": "swagger",
+		})
+	})
+
+	r.GET("/swagger/ui", func(c *gin.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(200, swaggerUIHTML)
+	})
+}
+
+const swaggerUIHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Swagger UI — URL Shortener API</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.8/swagger-ui.min.css">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.8/swagger-ui-bundle.min.js"></script>
+  <script>
+    SwaggerUIBundle({
+      url: '/swagger/openapi.yaml',
+      dom_id: '#swagger-ui',
+    });
+  </script>
+</body>
+</html>`
