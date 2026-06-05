@@ -1,0 +1,323 @@
+openapi: "3.0.3"
+info:
+  title: URL Shortener API
+  description: |
+    Сервис сокращения ссылок с аналитикой.
+    Позволяет создавать короткие ссылки, выполнять редиректы,
+    собирать статистику переходов и просматривать аналитику.
+  version: "1.0.0"
+  contact:
+    name: Tula State University
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/shorten:
+    post:
+      summary: Создать короткую ссылку
+      description: Принимает длинный URL и возвращает сокращённый код
+      operationId: createShortLink
+      tags:
+        - Links
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLinkRequest"
+      responses:
+        "201":
+          description: Ссылка успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateLinkResponse"
+        "400":
+          description: Невалидный URL или тело запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/links:
+    get:
+      summary: Список ссылок владельца
+      description: Возвращает все ссылки, принадлежащие указанному owner_id
+      operationId: listLinks
+      tags:
+        - Links
+      parameters:
+        - name: owner_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: UUID владельца ссылок
+      responses:
+        "200":
+          description: Список ссылок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Link"
+
+  /api/link/{id}:
+    delete:
+      summary: Удалить ссылку
+      description: Удаляет ссылку по её идентификатору
+      operationId: deleteLink
+      tags:
+        - Links
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID ссылки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                link_id:
+                  type: integer
+                  format: int64
+      responses:
+        "200":
+          description: Ссылка удалена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+
+  /api/link/{id}/stats:
+    get:
+      summary: Статистика по ссылке
+      description: Возвращает агрегированную статистику переходов по ссылке
+      operationId: getLinkStats
+      tags:
+        - Analytics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID ссылки
+      responses:
+        "200":
+          description: Статистика переходов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkStats"
+
+  /{code}:
+    get:
+      summary: Редирект по короткому коду
+      description: Выполняет HTTP-редирект 301 на оригинальный URL
+      operationId: redirectByCode
+      tags:
+        - Redirect
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Короткий код ссылки
+      responses:
+        "301":
+          description: Редирект на оригинальный URL
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Оригинальный URL
+        "404":
+          description: Ссылка не найдена
+
+  /health:
+    get:
+      summary: Проверка работоспособности
+      description: Возвращает статус сервиса
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        "200":
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /dashboard/links:
+    get:
+      summary: Дашборд — список ссылок
+      description: HTML-страница со списком ссылок владельца
+      tags:
+        - Dashboard
+      parameters:
+        - name: owner_id
+          in: query
+          schema:
+            type: string
+          description: ID владельца (по умолчанию demo)
+      responses:
+        "200":
+          description: HTML-страница
+
+  /dashboard/link/{id}:
+    get:
+      summary: Дашборд — статистика ссылки
+      description: HTML-страница с аналитикой по ссылке
+      tags:
+        - Dashboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID ссылки
+      responses:
+        "200":
+          description: HTML-страница
+
+components:
+  schemas:
+    CreateLinkRequest:
+      type: object
+      required:
+        - original_url
+      properties:
+        original_url:
+          type: string
+          format: uri
+          description: Длинный URL для сокращения
+          example: https://example.com/very/long/url/that/needs/shortening
+        owner_id:
+          type: string
+          description: Идентификатор владельца (UUID)
+          example: user-123
+        expires_at:
+          type: string
+          format: date-time
+          description: Дата истечения ссылки
+
+    CreateLinkResponse:
+      type: object
+      properties:
+        short_url:
+          type: string
+          example: http://localhost:8080/abc123
+        short_code:
+          type: string
+          example: abc123
+        original_url:
+          type: string
+          format: uri
+          example: https://example.com/very/long/url
+
+    Link:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        short_code:
+          type: string
+        original_url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        owner_id:
+          type: string
+          nullable: true
+
+    LinkStats:
+      type: object
+      properties:
+        total_clicks:
+          type: integer
+          format: int64
+          description: Общее количество переходов
+        unique_clicks:
+          type: integer
+          format: int64
+          description: Количество уникальных посетителей (по IP)
+        clicks_by_day:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClickByDay"
+        top_referrers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferrerStat"
+        top_countries:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryStat"
+
+    ClickByDay:
+      type: object
+      properties:
+        date:
+          type: string
+          example: "2026-06-01"
+        count:
+          type: integer
+          format: int64
+
+    ReferrerStat:
+      type: object
+      properties:
+        referrer:
+          type: string
+          example: twitter.com
+        count:
+          type: integer
+          format: int64
+
+    CountryStat:
+      type: object
+      properties:
+        country:
+          type: string
+          example: RU
+        count:
+          type: integer
+          format: int64
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: invalid URL
