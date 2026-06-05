@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/artem/url-shortener/internal/geo"
 	"github.com/artem/url-shortener/internal/model"
 	"github.com/artem/url-shortener/internal/service"
 )
@@ -118,8 +119,9 @@ func setupTest() (*gin.Engine, *testRepo, *testCache) {
 	repo := NewTestRepo()
 	cache := NewTestCache()
 	svc := service.NewShortenerService(repo, cache)
+	geoClient := geo.NewMockClient("RU", "Tula")
 	r := gin.New()
-	RegisterRoutes(r, svc, repo)
+	RegisterRoutes(r, svc, repo, geoClient)
 	return r, repo, cache
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/artem/url-shortener/internal/geo"
 	"github.com/artem/url-shortener/internal/model"
 	"github.com/artem/url-shortener/internal/service"
 )
@@ -41,8 +42,9 @@ func TestRedirectHandler_NotFound(t *testing.T) {
 	r := gin.New()
 
 	cache := &mockCacheRepo{}
+	geoClient := geo.NewMockClient("", "")
 	svc := service.NewShortenerService(&mockLinkRepo{}, cache)
-	h := NewRedirectHandler(svc, &mockLinkRepo{})
+	h := NewRedirectHandler(svc, &mockLinkRepo{}, geoClient)
 	r.GET("/:code", h.Redirect)
 
 	req := httptest.NewRequest(http.MethodGet, "/nonexistent", nil)
@@ -59,8 +61,9 @@ func TestRedirectHandler_BadRequest(t *testing.T) {
 	r := gin.New()
 
 	cache := &mockCacheRepo{}
+	geoClient := geo.NewMockClient("", "")
 	svc := service.NewShortenerService(&mockLinkRepo{}, cache)
-	h := NewRedirectHandler(svc, &mockLinkRepo{})
+	h := NewRedirectHandler(svc, &mockLinkRepo{}, geoClient)
 	r.GET("/", h.Redirect)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)

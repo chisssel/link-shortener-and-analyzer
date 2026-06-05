@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/artem/url-shortener/internal/geo"
 	"github.com/artem/url-shortener/internal/model"
 	"github.com/artem/url-shortener/internal/service"
 )
@@ -12,10 +14,11 @@ import (
 type RedirectHandler struct {
 	svc      *service.ShortenerService
 	linkRepo model.LinkRepository
+	geo      geo.GeoIPService
 }
 
-func NewRedirectHandler(svc *service.ShortenerService, linkRepo model.LinkRepository) *RedirectHandler {
-	return &RedirectHandler{svc: svc, linkRepo: linkRepo}
+func NewRedirectHandler(svc *service.ShortenerService, linkRepo model.LinkRepository, geo geo.GeoIPService) *RedirectHandler {
+	return &RedirectHandler{svc: svc, linkRepo: linkRepo, geo: geo}
 }
 
 func (h *RedirectHandler) Redirect(c *gin.Context) {
@@ -42,11 +45,19 @@ func (h *RedirectHandler) recordClick(c *gin.Context, shortCode string) {
 		return
 	}
 
+	ip := c.ClientIP()
+	country, city, geoErr := h.geo.Lookup(ip)
+	if geoErr != nil {
+		log.Printf("geo lookup failed for %s: %v", ip, geoErr)
+	}
+
 	click := &model.Click{
 		LinkID:    link.ID,
-		IPAddress: c.ClientIP(),
+		IPAddress: ip,
 		UserAgent: c.GetHeader("User-Agent"),
 		Referer:   c.GetHeader("Referer"),
+		Country:   country,
+		City:      city,
 	}
 
 	h.linkRepo.InsertClick(click)
