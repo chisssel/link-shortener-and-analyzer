@@ -20,7 +20,7 @@ func RegisterRoutes(
 	shorten := NewShortenHandler(svc, cfg, linkRepo)
 	redirect := NewRedirectHandler(svc, linkRepo, geoClient)
 	analytics := NewAnalyticsHandler(svc)
-	dash := NewDashboardHandler(svc, linkRepo)
+	dash := NewDashboardHandler(svc, linkRepo, cfg.BaseURL)
 
 	r.POST("/api/shorten", shorten.Create)
 	r.GET("/api/links", shorten.List)

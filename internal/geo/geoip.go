@@ -3,6 +3,7 @@ package geo
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 )
@@ -28,7 +29,7 @@ func NewClient() *Client {
 }
 
 func (c *Client) Lookup(ip string) (string, string, error) {
-	if ip == "" || ip == "127.0.0.1" || ip == "::1" {
+	if ip == "" || isPrivateIP(ip) {
 		return "RU", "Localhost", nil
 	}
 
@@ -62,4 +63,33 @@ func NewMockClient(country, city string) *MockClient {
 
 func (m *MockClient) Lookup(ip string) (string, string, error) {
 	return m.Country, m.City, nil
+}
+
+var privateCIDRs = []*net.IPNet{
+	mustCIDR("10.0.0.0/8"),
+	mustCIDR("172.16.0.0/12"),
+	mustCIDR("192.168.0.0/16"),
+	mustCIDR("127.0.0.0/8"),
+	mustCIDR("::1/128"),
+}
+
+func mustCIDR(s string) *net.IPNet {
+	_, cidr, err := net.ParseCIDR(s)
+	if err != nil {
+		panic(err)
+	}
+	return cidr
+}
+
+func isPrivateIP(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
+	}
+	for _, cidr := range privateCIDRs {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }

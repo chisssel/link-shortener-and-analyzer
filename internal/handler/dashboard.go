@@ -13,10 +13,11 @@ import (
 type DashboardHandler struct {
 	svc      *service.ShortenerService
 	linkRepo model.LinkRepository
+	baseURL  string
 }
 
-func NewDashboardHandler(svc *service.ShortenerService, linkRepo model.LinkRepository) *DashboardHandler {
-	return &DashboardHandler{svc: svc, linkRepo: linkRepo}
+func NewDashboardHandler(svc *service.ShortenerService, linkRepo model.LinkRepository, baseURL string) *DashboardHandler {
+	return &DashboardHandler{svc: svc, linkRepo: linkRepo, baseURL: baseURL}
 }
 
 func (h *DashboardHandler) IndexPage(c *gin.Context) {
@@ -46,6 +47,7 @@ func (h *DashboardHandler) LinksPage(c *gin.Context) {
 		"Content": "links",
 		"Links":   links,
 		"OwnerID": ownerID,
+		"BaseURL": h.baseURL,
 	})
 }
 

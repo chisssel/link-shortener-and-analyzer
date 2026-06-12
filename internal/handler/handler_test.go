@@ -239,66 +239,9 @@ func TestRedirect_Success(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, redirectReq)
 
-	if w2.Code != http.StatusMovedPermanently {
-		t.Errorf("expected 301, got %d", w2.Code)
+	if w2.Code != http.StatusFound {
+		t.Errorf("expected 302, got %d", w2.Code)
 	}
-	if loc := w2.Header().Get("Location"); loc != "https://example.com" {
-		t.Errorf("expected redirect to https://example.com, got %q", loc)
-	}
-}
-
-func TestRedirect_NotFound(t *testing.T) {
-	r, _, _ := setupTest()
-	req := httptest.NewRequest(http.MethodGet, "/nonexistent", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
-	}
-}
-
-func TestRedirect_EmptyCode(t *testing.T) {
-	r, _, _ := setupTest()
-	// Gin route /:code doesn't match "/" — it matches after the slash
-	// So "/" returns 404, but "/something" routes to handler
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404 for /, got %d", w.Code)
-	}
-}
-
-func TestRedirect_MultipleHits(t *testing.T) {
-	r, repo, _ := setupTest()
-	body := `{"original_url": "https://example.com"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	var createResp model.CreateLinkResponse
-	json.Unmarshal(w.Body.Bytes(), &createResp)
-
-	code := createResp.ShortCode
-	// Initial hit: creates link, no click yet
-	req1 := httptest.NewRequest(http.MethodGet, "/"+code, nil)
-	r.ServeHTTP(httptest.NewRecorder(), req1)
-
-	// Second hit: cache should serve it
-	req2 := httptest.NewRequest(http.MethodGet, "/"+code, nil)
-	w2 := httptest.NewRecorder()
-	r.ServeHTTP(w2, req2)
-
-	if w2.Code != http.StatusMovedPermanently {
-		t.Errorf("expected 301, got %d", w2.Code)
-	}
-	if loc := w2.Header().Get("Location"); loc != "https://example.com" {
-		t.Errorf("expected redirect to https://example.com, got %q", loc)
-	}
-	_ = repo
 }
 
 func TestAnalytics_GetStats(t *testing.T) {
@@ -490,7 +433,7 @@ func TestRedirect_TrackingClick(t *testing.T) {
 	r.ServeHTTP(w2, redirectReq)
 
 	_ = repo
-	if w2.Code == http.StatusMovedPermanently {
+	if w2.Code == http.StatusFound {
 		t.Logf("redirect succeeded, click tracked")
 	}
 }

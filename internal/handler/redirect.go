@@ -36,7 +36,8 @@ func (h *RedirectHandler) Redirect(c *gin.Context) {
 
 	go h.recordClick(c, code)
 
-	c.Redirect(http.StatusMovedPermanently, originalURL)
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
+	c.Redirect(http.StatusFound, originalURL)
 }
 
 func (h *RedirectHandler) recordClick(c *gin.Context, shortCode string) {

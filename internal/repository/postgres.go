@@ -25,9 +25,9 @@ func (r *PostgresRepo) Insert(originalURL string, ownerID *string) (*model.Link,
 	var link model.Link
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO links (original_url, owner_id) VALUES ($1, $2)
-		 RETURNING id, short_code, original_url, created_at, expires_at, owner_id`,
+		 RETURNING id, original_url, created_at, expires_at, owner_id`,
 		originalURL, ownerID,
-	).Scan(&link.ID, &link.ShortCode, &link.OriginalURL, &link.CreatedAt, &link.ExpiresAt, &link.OwnerID)
+	).Scan(&link.ID, &link.OriginalURL, &link.CreatedAt, &link.ExpiresAt, &link.OwnerID)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (r *PostgresRepo) GetStats(linkID int64) (*model.LinkStats, error) {
 	}
 
 	rows, err = r.pool.Query(ctx,
-		`SELECT COALESCE(referer, 'direct'), COUNT(*) FROM clicks
+		`SELECT COALESCE(NULLIF(referer, ''), 'direct'), COUNT(*) FROM clicks
 		 WHERE link_id = $1 GROUP BY referer ORDER BY 2 DESC LIMIT 10`, linkID)
 	if err == nil {
 		defer rows.Close()
@@ -146,7 +146,7 @@ func (r *PostgresRepo) GetStats(linkID int64) (*model.LinkStats, error) {
 	}
 
 	rows, err = r.pool.Query(ctx,
-		`SELECT COALESCE(country, 'unknown'), COUNT(*) FROM clicks
+		`SELECT COALESCE(NULLIF(country, ''), 'unknown'), COUNT(*) FROM clicks
 		 WHERE link_id = $1 GROUP BY country ORDER BY 2 DESC LIMIT 10`, linkID)
 	if err == nil {
 		defer rows.Close()
