@@ -2,11 +2,11 @@ CREATE EXTENSION IF NOT EXISTS "citext";
 
 CREATE TABLE IF NOT EXISTS links (
     id          BIGSERIAL PRIMARY KEY,
-    short_code  VARCHAR(10) NOT NULL UNIQUE,
+    short_code  VARCHAR(10) UNIQUE,
     original_url TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at  TIMESTAMPTZ,
-    owner_id    UUID
+    owner_id    VARCHAR(255)
 );
 
 CREATE INDEX idx_links_short_code ON links (short_code);
