@@ -93,18 +93,16 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Short Code</th>
+                            <th>Short URL</th>
                             <th>Original URL</th>
                             <th>Created</th>
-                            <th>Stats</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {{range .Links}}
                         <tr>
-                            <td>{{.ID}}</td>
-                            <td><span class="short-url">{{.ShortCode}}</span></td>
+                            <td><a href="{{$.BaseURL}}/{{.ShortCode}}" target="_blank">{{$.BaseURL}}/{{.ShortCode}}</a></td>
                             <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.OriginalURL}}</td>
                             <td>{{.CreatedAt.Format "02.01.2006 15:04"}}</td>
                             <td><a href="/dashboard/link/{{.ID}}" class="btn">Stats</a></td>
